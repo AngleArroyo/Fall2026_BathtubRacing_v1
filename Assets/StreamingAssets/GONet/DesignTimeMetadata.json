@@ -1,0 +1,94 @@
+{
+    "Entries": [
+        {
+            "location": "resources://Assets/GONet/Resources/GONet/GONet_GlobalContext.prefab",
+            "unityGuid": "56c1b12035c5c034f81a7b4c212a379e",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/GONet/Resources/GONet/GONet_GlobalContext_LiteLobby.prefab",
+            "unityGuid": "6dd6e7a1f7901e440a632b77f87d21bb",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/GONet/Resources/GONet/GONet_LocalContext.prefab",
+            "unityGuid": "338c05f05b3eb634894468e022a5a11f",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/GONet/Sample/Projectile/Resources/CannonBall.prefab",
+            "unityGuid": "cd34a05f71977084dad77778edeb26a3",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/GONet/Sample/Projectile/Resources/CannonBall_ZeroSync.prefab",
+            "unityGuid": "296a736c5d07aac40bac772034430131",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/GONet/Sample/Projectile/Resources/SpawnTestBeacon.prefab",
+            "unityGuid": "ed363b3c8191b064fa74c62efdad0f4c",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/GONet/Sample/Resources/AutoRotatingOrbitor.prefab",
+            "unityGuid": "d06b4174f9cd9ea45a8e7a16669f297b",
+            "codeGenerationId": 2
+        },
+        {
+            "location": "resources://Assets/GONet/Sample/Resources/AutoRotatingOrbitor_ZeroSync.prefab",
+            "unityGuid": "4fcc3b4cd3b61664fb145e4efc1158a4",
+            "codeGenerationId": 2
+        },
+        {
+            "location": "resources://Assets/GONet/Sample/Resources/Follower.prefab",
+            "unityGuid": "ff0647f685f02be429db5526fe0c7067",
+            "codeGenerationId": 2
+        },
+        {
+            "location": "resources://Assets/Resources/Prefabs/Karts/AI Kart.prefab",
+            "unityGuid": "85c72348657b1e049a6422b5dcb74a8d",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/Resources/Prefabs/Karts/Kart 1 (Red).prefab",
+            "unityGuid": "cded672173085034a8eda3557d68f12b",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/Resources/Prefabs/Karts/Kart 2 (Blue).prefab",
+            "unityGuid": "ef5c3afa013b1ba4681f470be357a3d8",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/Resources/Prefabs/Karts/Kart 3 (Green).prefab",
+            "unityGuid": "f13ac430ec052fb49814e100f6ae5568",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/Resources/Prefabs/Karts/Kart 4 (Pink).prefab",
+            "unityGuid": "c2c157f06b965e24184363e59630a88d",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/Resources/Prefabs/Karts/Kart 5 (Grey).prefab",
+            "unityGuid": "0644da20b176c0e4f8637aa80160d2da",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/Resources/Prefabs/Karts/Player Kart.prefab",
+            "unityGuid": "73ffa1b9be9991847b175b2229a0abd6",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "resources://Assets/Resources/Prefabs/OldPlayerKart.prefab",
+            "unityGuid": "c56a5cae37c1f58478f9a87aacfe6d35",
+            "codeGenerationId": 1
+        },
+        {
+            "location": "scene://Racetrack/RaceManager",
+            "unityGuid": "",
+            "codeGenerationId": 1
+        }
+    ]
+}
