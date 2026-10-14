@@ -1,8 +1,8 @@
 # Southern Bathtub Race
 
 **Southern Bathtub Race** was created by Caroline Roberson, Treonna Gardner, Jes Crouch, Jose Landaverde, and Jake Lashley for their SWE Capstone Project during Fall 
-Semester 2025 at Kennesaw State University.
-In Spring 2026, William Urvan, William Pitts, Joshua Young, and Thomas Powell took hold of the project and added multiplayer for their Senior Capstone.
+Semester 2026 at Kennesaw State University.
+In fall 2026, Bryce Armand, Angel Arroyo, Matthew Ohanaja, Sam Joubert, and Tony Mendez took hold of the project and added multiplayer for their Senior Capstone.
 
 ### About
 
@@ -56,6 +56,7 @@ The source code requires **6 GB of available storage space** and **8 GB RAM** to
 - **RT** to speed up, **LT** to slow down.
 - **A** (or button south) to boost.
 - Press and **hold Left Stick** to drift.
+- ALT perspective change
 
 
 ## 🌐 Multiplayer
