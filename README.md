@@ -25,7 +25,7 @@ The source code requires **6 GB of available storage space** and **8 GB RAM** to
 ## 🚀 Quick Start
 
 ### Playing the Game
-1. Download the latest build [here](https://drive.google.com/file/d/1r9M3KoXAz2_Z7JfARiN0gKSw1jW8X89S/view?usp=drive_link)
+1. Download the latest build [here](SPSU Racing Game.exe)
 2. Extract the folder
 3. Run `SPSU Racing Game.exe`
 
