@@ -371,6 +371,16 @@ public class RaceManager : GONetParticipantCompanionBehaviour
 
         Debug.Log($"{nameof(EndRace)}! Winner name: '{winnerName}', GONet AuthId: {winnerAuthId}, SteamID: {winnerSteamId}");
         GameUI.ShowEndRaceScreen(winnerName);
+
+        if (TryGetClientKart(out NetworkedKart clientKart) && clientKart.RacerInfo == winnerInfo && clientKart.RacerInfo.CompletedLaps >= TotalLaps)
+        {
+            bool NewPlayerBest = SteamScoresManager.Instance.UploadPlayerBestScore(clientKart.RacerInfo.totalTime,TotalLaps);
+
+            if (NewPlayerBest)
+            {
+                Debug.Log("The client recorded a new best time");
+            }
+        }
     }
     public void OnEndRaceScreenShown()
     {

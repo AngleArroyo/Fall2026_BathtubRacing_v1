@@ -60,6 +60,7 @@ public class SteamManager : MonoBehaviour, IOrderedScript
 
     public void OrderedAwake()
     {
+        //Debug.Log($"The APP ID is: {SteamUtils.GetAppID()}");
         Instance = this;
 
         //Subscribe to Steam events.

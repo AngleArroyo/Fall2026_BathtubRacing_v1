@@ -577,7 +577,7 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
                     ""path"": ""<Keyboard>/leftAlt"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": "";Keyboard&Mouse"",
                     ""action"": ""SwitchCam"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -585,10 +585,10 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""562aaf45-652e-4ce7-9135-e193fcfe89d9"",
-                    ""path"": """",
+                    ""path"": ""<Gamepad>/buttonNorth"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": "";Gamepad"",
                     ""action"": ""SwitchCam"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
