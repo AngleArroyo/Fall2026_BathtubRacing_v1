@@ -1,290 +1,362 @@
+
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
-using System;
 
 public class TrackSelectionManager : MonoBehaviour
 {
+    // LAP SETTINGS
     public const string SavedLapCountKey = "LapCount";
     public const int DefaultLapCount = 3;
     public const int MaxLapCount = 50;
 
+    // AI RACER SETTINGS
     public const string SavedAICountKey = "AICount";
     public const int DefaultAICount = 3;
 
-    [Header("Lap / Opponent Inputs")]
-    public TMP_InputField lapsInput; // For 'Number of Laps'
-    public TMP_InputField opponentsInput; // For 'Number of Opponents'
+    [Header("Lap and AI Input Fields")]
+    public TMP_InputField lapsInput;
+    public TMP_InputField opponentsInput;
 
-    [Space]
-    [Header("Main Buttons")]
-    public Button BackBtn;
-    public Button StartBtn;
-
-    [Space]
-    [Header("Lap / Opponent Buttons")]
+    [Header("Lap Adjustment Buttons")]
     public Button LapDecreaseBtn;
     public Button LapIncreaseBtn;
+
+    [Header("AI Racer Adjustment Buttons")]
     public Button OpponentDecreaseBtn;
     public Button OpponentIncreaseBtn;
 
-    [Space]
-    [Header("Track Selection Buttons")]
-    public Button PreviousTrackBtn;
-    public Button NextTrackBtn;
+    [Header("Navigation Buttons")]
+    public Button BackBtn;
+    public Button StartBtn;
 
-    [Space]
-    [Header("Track Selection UI")]
-    public TMP_Text trackNameText;
-    public TMP_Text trackSubtitleText;
-    public TMP_Text trackDescriptionText;
-    public TMP_Text trackCounterText;
-    public RawImage trackThumbnail;
-    public RawImage trackMap;
-
-    [Space]
-    [Header("Available Tracks")]
-    public TrackDefinition[] tracks;
-
-    private int currentTrackIndex = 0;
-
+    // Maximum number of AI racers allowed.
     public int MaxAICount => SteamManager.InSteamLobby
-        //If we're in a lobby, max AI count is max players - current players (including host).
-        ? NetworkManager.MaxPlayerCount - SteamManager.GetLobbyPlayerCount()
+        ? NetworkManager.MaxPlayerCount -
+          SteamManager.GetLobbyPlayerCount()
         : NetworkManager.MaxPlayerCount - 1;
-    //If we're in a lobby and there's at least another player, allow 0 AI opponents.
-    public int MinAICount => SteamManager.InSteamLobby && SteamManager.GetLobbyPlayerCount() > 1 ? 0 : 1;
+
+    // Allow zero AI racers when multiple
+    // players are in a Steam lobby.
+    public int MinAICount =>
+        SteamManager.InSteamLobby &&
+        SteamManager.GetLobbyPlayerCount() > 1 ? 0 : 1;
 
     void Awake()
     {
-        lapsInput.onValueChanged.AddListener(OnLapsInputChanged);
-        opponentsInput.onValueChanged.AddListener(OnOpponentsInputChanged);
+        // Input field listeners.
+        lapsInput.onValueChanged.AddListener(
+            OnLapsInputChanged);
 
+        opponentsInput.onValueChanged.AddListener(
+            OnOpponentsInputChanged);
+
+        // Navigation buttons.
         BackBtn.onClick.AddListener(OnBackClick);
         StartBtn.onClick.AddListener(OnStartClick);
 
-        LapDecreaseBtn.onClick.AddListener(OnLapDecreaseClick);
-        LapIncreaseBtn.onClick.AddListener(OnLapIncreaseClick);
+        // Lap adjustment buttons.
+        if (LapDecreaseBtn != null)
+        {
+            LapDecreaseBtn.onClick.AddListener(
+                DecreaseLaps);
+        }
 
-        OpponentDecreaseBtn.onClick.AddListener(OnOpponentDecreaseClick);
-        OpponentIncreaseBtn.onClick.AddListener(OnOpponentIncreaseClick);
+        if (LapIncreaseBtn != null)
+        {
+            LapIncreaseBtn.onClick.AddListener(
+                IncreaseLaps);
+        }
 
-        PreviousTrackBtn.onClick.AddListener(OnPreviousTrackClick);
-        NextTrackBtn.onClick.AddListener(OnNextTrackClick);
+        // AI racer adjustment buttons.
+        if (OpponentDecreaseBtn != null)
+        {
+            OpponentDecreaseBtn.onClick.AddListener(
+                DecreaseOpponents);
+        }
+
+        if (OpponentIncreaseBtn != null)
+        {
+            OpponentIncreaseBtn.onClick.AddListener(
+                IncreaseOpponents);
+        }
     }
 
     void OnEnable()
     {
-        //Load saved values.
-        lapsInput.text = GetSavedLapCount().ToString();
-        opponentsInput.text = GetSavedAICount().ToString();
+        // Load previously saved values.
+        int savedLaps = Mathf.Clamp(
+            GetSavedLapCount(),
+            1,
+            MaxLapCount
+        );
 
-        //Load the last selected track.
-        if (tracks != null && tracks.Length > 0)
-        {
-            currentTrackIndex = Mathf.Clamp(
-                TrackSelectionState.SelectedTrackIndex,
-                0,
-                tracks.Length - 1
-            );
+        int savedAI = Mathf.Clamp(
+            GetSavedAICount(),
+            MinAICount,
+            MaxAICount
+        );
 
-            UpdateTrackUI();
-        }
-        else
-        {
-            Debug.LogWarning(
-                $"{nameof(TrackSelectionManager)}: No TrackDefinition assets have been assigned."
-            );
-        }
+        // Update the displayed numbers.
+        lapsInput.SetTextWithoutNotify(
+            savedLaps.ToString());
+
+        opponentsInput.SetTextWithoutNotify(
+            savedAI.ToString());
     }
+
+    // ==================================
+    // LAP INCREASE AND DECREASE
+    // ==================================
+
+    public void IncreaseLaps()
+    {
+        ChangeLaps(1);
+    }
+
+    public void DecreaseLaps()
+    {
+        ChangeLaps(-1);
+    }
+
+    void ChangeLaps(int amount)
+    {
+        int currentLaps;
+
+        if (!int.TryParse(
+            lapsInput.text, out currentLaps))
+        {
+            currentLaps = DefaultLapCount;
+        }
+
+        int newLapCount = Mathf.Clamp(
+            currentLaps + amount,
+            1,
+            MaxLapCount
+        );
+
+        lapsInput.SetTextWithoutNotify(
+            newLapCount.ToString());
+
+        Debug.Log("Lap Count: " + newLapCount);
+    }
+
+    // ==================================
+    // AI RACER INCREASE AND DECREASE
+    // ==================================
+
+    public void IncreaseOpponents()
+    {
+        ChangeOpponents(1);
+    }
+
+    public void DecreaseOpponents()
+    {
+        ChangeOpponents(-1);
+    }
+
+    void ChangeOpponents(int amount)
+    {
+        int currentOpponents;
+
+        if (!int.TryParse(
+            opponentsInput.text,
+            out currentOpponents))
+        {
+            currentOpponents = DefaultAICount;
+        }
+
+        int newOpponentCount = Mathf.Clamp(
+            currentOpponents + amount,
+            MinAICount,
+            MaxAICount
+        );
+
+        opponentsInput.SetTextWithoutNotify(
+            newOpponentCount.ToString());
+
+        Debug.Log(
+            "AI Racer Count: " + newOpponentCount);
+    }
+
+    // ==================================
+    // MANUAL LAP INPUT VALIDATION
+    // ==================================
 
     void OnLapsInputChanged(string input)
     {
-        if (int.TryParse(input, out int parsedLaps))
+        if (int.TryParse(
+            input, out int parsedLaps))
         {
-            parsedLaps = Mathf.Clamp(parsedLaps, 1, MaxLapCount);
-            lapsInput.SetTextWithoutNotify(parsedLaps.ToString());
+            parsedLaps = Mathf.Clamp(
+                parsedLaps,
+                1,
+                MaxLapCount
+            );
+
+            lapsInput.SetTextWithoutNotify(
+                parsedLaps.ToString());
         }
         else
-            lapsInput.SetTextWithoutNotify(DefaultLapCount.ToString());
+        {
+            lapsInput.SetTextWithoutNotify(
+                DefaultLapCount.ToString());
+        }
     }
+
+    // ==================================
+    // MANUAL AI INPUT VALIDATION
+    // ==================================
 
     void OnOpponentsInputChanged(string input)
     {
-        if (int.TryParse(input, out int parsedAICount))
+        if (int.TryParse(
+            input, out int parsedAICount))
         {
-            parsedAICount = Mathf.Clamp(parsedAICount, MinAICount, MaxAICount);
-            opponentsInput.SetTextWithoutNotify(parsedAICount.ToString());
+            parsedAICount = Mathf.Clamp(
+                parsedAICount,
+                MinAICount,
+                MaxAICount
+            );
+
+            opponentsInput.SetTextWithoutNotify(
+                parsedAICount.ToString());
         }
         else
-            opponentsInput.SetTextWithoutNotify(DefaultAICount.ToString());
+        {
+            int defaultAI = Mathf.Clamp(
+                DefaultAICount,
+                MinAICount,
+                MaxAICount
+            );
+
+            opponentsInput.SetTextWithoutNotify(
+                defaultAI.ToString());
+        }
     }
 
-    void OnLapDecreaseClick()
-    {
-        int.TryParse(lapsInput.text, out int parsedLaps);
-
-        parsedLaps--;
-        parsedLaps = Mathf.Clamp(parsedLaps, 1, MaxLapCount);
-
-        lapsInput.text = parsedLaps.ToString();
-
-        ClearButtonSelection();
-    }
-
-    void OnLapIncreaseClick()
-    {
-        int.TryParse(lapsInput.text, out int parsedLaps);
-
-        parsedLaps++;
-        parsedLaps = Mathf.Clamp(parsedLaps, 1, MaxLapCount);
-
-        lapsInput.text = parsedLaps.ToString();
-
-        ClearButtonSelection();
-    }
-
-    void OnOpponentDecreaseClick()
-    {
-        int.TryParse(opponentsInput.text, out int parsedAICount);
-
-        parsedAICount--;
-        parsedAICount = Mathf.Clamp(parsedAICount, MinAICount, MaxAICount);
-
-        opponentsInput.text = parsedAICount.ToString();
-
-        ClearButtonSelection();
-    }
-
-    void OnOpponentIncreaseClick()
-    {
-        int.TryParse(opponentsInput.text, out int parsedAICount);
-
-        parsedAICount++;
-        parsedAICount = Mathf.Clamp(parsedAICount, MinAICount, MaxAICount);
-
-        opponentsInput.text = parsedAICount.ToString();
-
-        ClearButtonSelection();
-    }
-
-    void OnPreviousTrackClick()
-    {
-        ChangeTrack(-1);
-        ClearButtonSelection();
-    }
-
-    void OnNextTrackClick()
-    {
-        ChangeTrack(1);
-        ClearButtonSelection();
-    }
-
-    void ChangeTrack(int direction)
-    {
-        if (tracks == null || tracks.Length == 0)
-            return;
-
-        currentTrackIndex += direction;
-
-        //Wrap around from the first track to the last track and vice versa.
-        if (currentTrackIndex < 0)
-            currentTrackIndex = tracks.Length - 1;
-        else if (currentTrackIndex >= tracks.Length)
-            currentTrackIndex = 0;
-
-        UpdateTrackUI();
-    }
-
-    void UpdateTrackUI()
-    {
-        if (tracks == null || tracks.Length == 0)
-            return;
-
-        TrackDefinition track = tracks[currentTrackIndex];
-
-        if (track == null)
-            return;
-
-        if (trackNameText != null)
-            trackNameText.text = track.trackName;
-
-        if (trackSubtitleText != null)
-            trackSubtitleText.text = track.subtitle;
-
-        if (trackDescriptionText != null)
-            trackDescriptionText.text = track.description;
-
-        if (trackThumbnail != null)
-            trackThumbnail.texture = track.thumbnail;
-
-        if (trackMap != null)
-            trackMap.texture = track.mapImage;
-
-        if (trackCounterText != null)
-            trackCounterText.text = $"{currentTrackIndex + 1} / {tracks.Length}";
-    }
-
-    void ClearButtonSelection()
-    {
-        if (EventSystem.current != null)
-            EventSystem.current.SetSelectedGameObject(null);
-    }
+    // ==================================
+    // BACK BUTTON
+    // ==================================
 
     void OnBackClick()
     {
-        MainMenuManager.Instance.ShowTrackSelection(false);
+        if (MainMenuManager.Instance != null)
+        {
+            MainMenuManager.Instance
+                .ShowTrackSelection(false);
+        }
+        else
+        {
+            Debug.LogError(
+                "TrackSelectionManager: " +
+                "MainMenuManager.Instance is NULL! " +
+                "Cannot return to the main menu."
+            );
+        }
     }
+
+    // ==================================
+    // START RACE BUTTON
+    // ==================================
 
     void OnStartClick()
     {
-        int.TryParse(lapsInput.text, out int parsedLaps);
-        parsedLaps = Mathf.Clamp(parsedLaps, 1, MaxLapCount);
-        int.TryParse(opponentsInput.text, out int parsedAICount);
-        parsedAICount = Mathf.Clamp(parsedAICount, MinAICount, MaxAICount);
-
-        //int laps = 3;
-        //if (!int.TryParse(lapsInput.text, out laps))
-        //    laps = 3;
-        //// Lap Limit
-        //laps = Mathf.Clamp(laps, 1, 50);
-
-        //Save to player prefs.
-        PlayerPrefs.SetInt(SavedLapCountKey, parsedLaps);
-        PlayerPrefs.SetInt(SavedAICountKey, parsedAICount);
-
-        //Save the selected track.
-        if (tracks != null && tracks.Length > 0 && tracks[currentTrackIndex] != null)
+        // Read the selected lap count.
+        if (!int.TryParse(
+            lapsInput.text, out int parsedLaps))
         {
-            TrackDefinition selectedTrack = tracks[currentTrackIndex];
-
-            TrackSelectionState.SaveSelectedTrack(
-                currentTrackIndex,
-                selectedTrack.sceneName
-            );
-
-            Debug.Log(
-                $"{nameof(TrackSelectionManager)}: Selected track: " +
-                $"{selectedTrack.trackName}, scene: {selectedTrack.sceneName}"
-            );
+            parsedLaps = DefaultLapCount;
         }
+
+        parsedLaps = Mathf.Clamp(
+            parsedLaps,
+            1,
+            MaxLapCount
+        );
+
+        // Read the selected AI count.
+        if (!int.TryParse(
+            opponentsInput.text,
+            out int parsedAICount))
+        {
+            parsedAICount = DefaultAICount;
+        }
+
+        parsedAICount = Mathf.Clamp(
+            parsedAICount,
+            MinAICount,
+            MaxAICount
+        );
+
+        // Save selections to PlayerPrefs.
+        PlayerPrefs.SetInt(
+            SavedLapCountKey,
+            parsedLaps
+        );
+
+        PlayerPrefs.SetInt(
+            SavedAICountKey,
+            parsedAICount
+        );
 
         PlayerPrefs.Save();
 
-        Debug.Log($"{nameof(TrackSelectionManager)}: Set lap count: {parsedLaps}, set opponent count: {parsedAICount}");
+        Debug.Log(
+            $"TrackSelectionManager: " +
+            $"Set lap count: {parsedLaps}, " +
+            $"set opponent count: {parsedAICount}"
+        );
 
-        //Start the game.
-        NetworkManager.Instance.StartGame();
+        // ==================================
+        // NETWORK MANAGER NULL CHECK
+        // ==================================
+
+        // Check whether the NetworkManager
+        // has been initialized before
+        // attempting to start the race.
+
+        if (NetworkManager.Instance != null)
+        {
+            Debug.Log(
+                "TrackSelectionManager: " +
+                "NetworkManager found. " +
+                "Starting race..."
+            );
+
+            NetworkManager.Instance.StartGame();
+        }
+        else
+        {
+            Debug.LogError(
+                "TrackSelectionManager: " +
+                "NetworkManager.Instance is NULL! " +
+                "The NetworkManager has not been " +
+                "initialized. Cannot start the race. " +
+                "Check whether the NetworkManager " +
+                "exists in the current scene or " +
+                "is initialized through Bootstrap."
+            );
+        }
     }
+
+    // ==================================
+    // SAVED VALUES
+    // ==================================
 
     public static int GetSavedLapCount()
     {
-        return PlayerPrefs.GetInt(SavedLapCountKey, DefaultLapCount);
+        return PlayerPrefs.GetInt(
+            SavedLapCountKey,
+            DefaultLapCount
+        );
     }
 
     public static int GetSavedAICount()
     {
-        return PlayerPrefs.GetInt(SavedAICountKey, DefaultAICount);
+        return PlayerPrefs.GetInt(
+            SavedAICountKey,
+            DefaultAICount
+        );
     }
 }

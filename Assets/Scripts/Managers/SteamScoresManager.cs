@@ -25,7 +25,7 @@ public class SteamScoresManager : MonoBehaviour//, IOrderedScript
     [ContextMenu("Set Scores Here")]
     private void SetScore()
     {
-        SetPlayerBestScore(1, 90.00f);
+        SetPlayerBestScore(999, 999.00f);
     }
     public static SteamScoresManager Instance { get; private set; }
     /*(public int CallOrder => 0;

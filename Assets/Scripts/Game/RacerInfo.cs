@@ -28,7 +28,7 @@ public class RacerInfo : MonoBehaviour
     public float CurrentLapTime;
     public List<float> lapTimes = new List<float>();
     public float totalTime = 0f;
-    
+
     [NonSerialized] public GONetParticipant Participant;
 
     [Tooltip("A value representing how far ahead we are in the race. Basically represents how many waypoints you've passed.")]
@@ -68,7 +68,7 @@ public class RacerInfo : MonoBehaviour
     void OnDisable()
     {
         RaceManager.OnRaceStart -= RaceManager_OnRaceStart;
-        
+
         RaceManager.Instance.AddRacerInfo(this, false);
     }
 
@@ -155,7 +155,7 @@ public class RacerInfo : MonoBehaviour
             if (newCurrent == WaypointContainer.GetStartingWaypoint())
             {
                 CompletedLaps++;
-               // Debug.Log($"Racer: '{name}' just completed {CompletedLaps} laps!");
+                // Debug.Log($"Racer: '{name}' just completed {CompletedLaps} laps!");
 
                 float endTime = raceTimer.raceTime;
                 CurrentLapTime = endTime - StartTime;
@@ -168,12 +168,12 @@ public class RacerInfo : MonoBehaviour
                 int seconds = Mathf.FloorToInt(endTime % 60);
                 int milliseconds = Mathf.FloorToInt((endTime * 100) % 100);
 
-                
+
                 Debug.Log($"TIME INFO: Racer: {name} completed Lap {CompletedLaps} at {minutes:00}:{seconds:00}:{milliseconds:00}, Time it took to complete lap was: {CurrentLapTime}");
 
                 RaceManager.Instance.CheckEndConditions();
 
-                if (RaceManager.TryGetClientKart (out NetworkedKart clientKart) && clientKart.RacerInfo == this)
+                if (RaceManager.TryGetClientKart(out NetworkedKart clientKart) && clientKart.RacerInfo == this)
                     raceTimer.TimerFlash(CurrentLapTime); // here specfically so it ends the race first... don't want to delay the end of the race just for a flash animation
             }
         }
@@ -215,6 +215,6 @@ public class RacerInfo : MonoBehaviour
             raceTimer = FindFirstObjectByType<RaceTimer>();
             //Debug.Log("getRaceTimer SUCESSFUL");
         }
-            
+
     }
 }

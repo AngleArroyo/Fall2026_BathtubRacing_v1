@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: de04f700c2f34664ab1fbb383affe3f5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - ScoresScreen: {fileID: 5041824792288328123, guid: 61edaa6b459053f41ab9e7caa7cb8a4d, type: 3}
+  - YourScoresPanel: {instanceID: 0}
+  - GlobalLeaderboardPanel: {instanceID: 0}
+  - YourScoresBtn: {instanceID: 0}
+  - GlobalLeaderboardBtn: {instanceID: 0}
+  - ScoresBackBtn: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

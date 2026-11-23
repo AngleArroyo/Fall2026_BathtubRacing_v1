@@ -94,7 +94,7 @@ public class GameUI : MonoBehaviour
             return;
 
         string text = "";
-        
+
         for (int i = 0; i < racerInfo.lapTimes.Count; i++)
         {
             float lap = racerInfo.lapTimes[i];
@@ -102,8 +102,8 @@ public class GameUI : MonoBehaviour
             int minutes = Mathf.FloorToInt(lap / 60);
             int seconds = Mathf.FloorToInt(lap % 60);
             int milliseconds = Mathf.FloorToInt((lap * 100) % 100);
-            
-            text += ($"Completed Lap {i+1} in: {minutes:00}:{seconds:00}:{milliseconds:00}\n");
+
+            text += ($"Completed Lap {i + 1} in: {minutes:00}:{seconds:00}:{milliseconds:00}\n");
         }
 
         if (racerInfo.lapTimes.Count > 0)
@@ -118,3 +118,4 @@ public class GameUI : MonoBehaviour
         LapTimesText.text = text;
     }
 }
+

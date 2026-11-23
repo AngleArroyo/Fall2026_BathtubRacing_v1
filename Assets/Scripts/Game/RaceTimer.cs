@@ -8,7 +8,7 @@ public class RaceTimer : MonoBehaviour
 {
     public TMP_Text timerText;
     public bool raceActive = false;
-    public float raceTime = 0f; 
+    public float raceTime = 0f;
     public bool lapCompleted = false;
     public Coroutine CurrentLapTimeFlash;
 
@@ -21,7 +21,7 @@ public class RaceTimer : MonoBehaviour
         if (!lapCompleted)
             UpdateTimerDisplay();
 
-       // Debug.Log($"RaceTimer: I started now at {Time.time}");
+        // Debug.Log($"RaceTimer: I started now at {Time.time}");
         //UpdateTimerDisplay();
     }
 
@@ -40,7 +40,7 @@ public class RaceTimer : MonoBehaviour
     public void StartRace() => raceActive = true;
     public void StopRace() => raceActive = false;
 
-    public void TimerFlash (float CurrentLapTime)
+    public void TimerFlash(float CurrentLapTime)
     {
         if (CurrentLapTimeFlash != null)
             StopCoroutine(CurrentLapTimeFlash);
@@ -73,3 +73,4 @@ public class RaceTimer : MonoBehaviour
         CurrentLapTimeFlash = null;
     }
 }
+

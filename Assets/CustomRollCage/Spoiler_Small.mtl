@@ -1,0 +1,25 @@
+newmtl Wing
+Kd 0.03 0.03 0.03
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+
+newmtl Support
+Kd 0.05 0.05 0.05
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+
+newmtl Plate
+Kd 0.04 0.04 0.04
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+
+newmtl Mount
+Kd 0.08 0.08 0.08
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+
+newmtl Bolt
+Kd 0.1 0.1 0.1
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+

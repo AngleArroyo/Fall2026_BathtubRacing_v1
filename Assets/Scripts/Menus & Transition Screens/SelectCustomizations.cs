@@ -1,7 +1,6 @@
+
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -10,253 +9,612 @@ public class SelectCustomizations : MonoBehaviour
 {
     public KartModel KartModel;
 
+    [Header("Customization Dropdowns")]
     public TMP_Dropdown rollCageInput;
     public TMP_Dropdown wheelInput;
     public TMP_Dropdown extraDetailInput;
     public TMP_Dropdown decalInput;
 
-    //public TMP_InputField kartNameInput;
-    //public TMP_InputField driverNameInput;
+    private const string ExtraDetailSaveKey = "KartExtraDetailIndex";
 
-    void Awake()
+    private bool initialized;
+
+    private void Awake()
     {
-        SetDropdowns();
+        initialized = CheckReferences();
+
+        if (initialized)
+        {
+            RepairSceneReferences();
+            SetDropdowns();
+        }
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
-        LoadData();
-    }
-    void OnDisable()
-    {
-        SaveData();
-    }
-
-    void SetDropdowns()
-    {
-        SetDropdown(rollCageInput, typeof(RollCageType), KartModel.SetRollCage);
-        SetDropdown(wheelInput, typeof(WheelType), KartModel.SetWheels);
-        SetDropdown(extraDetailInput, typeof(ExtraDetailType), KartModel.SetExtraDetail);
-        SetDropdown(decalInput, typeof(DecalType), KartModel.SetDecal);
+        if (initialized)
+        {
+            RepairSceneReferences();
+            LoadData();
+        }
     }
 
-    public void SetDropdown(TMP_Dropdown dropdown, Type enumType, UnityAction<int> onValueChanged)
+    private void OnDisable()
     {
+        if (initialized)
+        {
+            SaveData();
+        }
+    }
+
+    private bool CheckReferences()
+    {
+        if (KartModel == null ||
+            rollCageInput == null ||
+            wheelInput == null ||
+            extraDetailInput == null ||
+            decalInput == null)
+        {
+            Debug.LogError(
+                "SelectCustomizations: Assign KartModel and all four dropdowns.",
+                this
+            );
+
+            return false;
+        }
+
+        if (!KartModel.gameObject.scene.IsValid())
+        {
+            Debug.LogError(
+                "KartModel references a prefab asset. Assign the scene KartModel.",
+                this
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private void RepairSceneReferences()
+    {
+        RepairObjectList(
+            KartModel.RollCageObjs,
+            new string[]
+            {
+                "Roll Cages/RollCage_Round",
+                "Roll Cages/RollCage_Box",
+                "Roll Cages/RollCage_Slim",
+                "Roll Cages/MetalBoxCage"
+            }
+        );
+
+        RepairObjectList(
+            KartModel.ExtraDetailObjs,
+            new string[]
+            {
+                "Extra Details/ExtraDetail_None",
+                "Extra Details/ExtraDetail_FrontWing",
+                "Extra Details/BigSpoiler",
+                "Extra Details/LilSpoiler"
+            }
+        );
+    }
+
+    private void RepairObjectList(
+        List<GameObject> objects,
+        string[] paths)
+    {
+        if (objects == null)
+        {
+            Debug.LogWarning(
+                "Customization object list is missing.",
+                this
+            );
+            return;
+        }
+
+        for (int i = 0; i < paths.Length; i++)
+        {
+            while (objects.Count <= i)
+            {
+                objects.Add(null);
+            }
+
+            Transform found = KartModel.transform.Find(paths[i]);
+
+            if (found == null ||
+                !found.gameObject.scene.IsValid())
+            {
+                Debug.LogWarning(
+                    "Could not find scene object: " +
+                    paths[i],
+                    this
+                );
+                continue;
+            }
+
+            if (objects[i] != found.gameObject)
+            {
+                objects[i] = found.gameObject;
+
+                Debug.Log(
+                    "Connected scene object: " +
+                    found.name,
+                    this
+                );
+            }
+        }
+    }
+
+    private void SetDropdowns()
+    {
+        SetRollCageDropdown();
+        SetWheelDropdown();
+        SetExtraDetailDropdown();
+
+        SetDropdown(
+            decalInput,
+            typeof(DecalType),
+            KartModel.SetDecal
+        );
+    }
+
+    private void SetRollCageDropdown()
+    {
+        if (rollCageInput == null || KartModel == null)
+        {
+            Debug.LogError(
+                "Roll cage dropdown or KartModel is missing!",
+                this
+            );
+            return;
+        }
+
+        rollCageInput.ClearOptions();
+
+        List<string> rollCageOptions = new List<string>
+        {
+            "Round",
+            "Box",
+            "Slim",
+            "Metal Box"
+        };
+
+        rollCageInput.AddOptions(rollCageOptions);
+
+        rollCageInput.onValueChanged.RemoveAllListeners();
+
+        rollCageInput.onValueChanged.AddListener(index =>
+        {
+            Debug.Log(
+                "Roll cage dropdown changed to: " + index,
+                this
+            );
+
+            RepairSceneReferences();
+
+            KartModel.SetRollCage(index);
+
+            if (KartModel.RollCageObjs != null &&
+                index >= 0 &&
+                index < KartModel.RollCageObjs.Count)
+            {
+                GameObject selectedCage =
+                    KartModel.RollCageObjs[index];
+
+                if (selectedCage != null)
+                {
+                    Debug.Log(
+                        "Roll cage: " + selectedCage.name +
+                        " | Active: " +
+                        selectedCage.activeInHierarchy +
+                        " | Scene: " +
+                        selectedCage.scene.name,
+                        this
+                    );
+
+                    Renderer[] renderers =
+                        selectedCage.GetComponentsInChildren<Renderer>(true);
+
+                    Debug.Log(
+                        "Roll cage renderers found: " +
+                        renderers.Length,
+                        this
+                    );
+
+                    foreach (Renderer rend in renderers)
+                    {
+                        Debug.Log(
+                            "Renderer: " + rend.name +
+                            " | Enabled: " + rend.enabled +
+                            " | Active: " +
+                            rend.gameObject.activeInHierarchy,
+                            this
+                        );
+                    }
+
+                    if (!selectedCage.activeInHierarchy)
+                    {
+                        Debug.LogWarning(
+                            "Selected roll cage is not active in the Hierarchy!",
+                            this
+                        );
+                    }
+
+                    if (renderers.Length == 0)
+                    {
+                        Debug.LogWarning(
+                            "No renderers found on selected roll cage!",
+                            this
+                        );
+                    }
+                }
+            }
+
+            DebugCustomizationReferences();
+        });
+
+        rollCageInput.RefreshShownValue();
+
+        Debug.Log(
+            "Roll cage dropdown initialized!",
+            this
+        );
+    }
+
+    private void SetWheelDropdown()
+    {
+        wheelInput.ClearOptions();
+
+        List<string> wheelOptions = new List<string>
+        {
+            "Small",
+            "Large",
+            "Combo",
+            "Tire Wheel"
+        };
+
+        wheelInput.AddOptions(wheelOptions);
+
+        wheelInput.onValueChanged.RemoveAllListeners();
+
+        wheelInput.onValueChanged.AddListener(index =>
+        {
+            KartModel.SetWheels(index);
+
+            Debug.Log(
+                "Wheel selected: " + index,
+                this
+            );
+        });
+
+        wheelInput.RefreshShownValue();
+    }
+
+    private void SetExtraDetailDropdown()
+    {
+        extraDetailInput.ClearOptions();
+
+        List<string> extraDetailOptions = new List<string>
+        {
+            "None",
+            "Front Wing",
+            "Big Spoiler",
+            "Lil Spoiler"
+        };
+
+        extraDetailInput.AddOptions(extraDetailOptions);
+
+        extraDetailInput.onValueChanged.RemoveAllListeners();
+
+        extraDetailInput.onValueChanged.AddListener(index =>
+        {
+            RepairSceneReferences();
+
+            KartModel.SetExtraDetail(index);
+
+            PlayerPrefs.SetInt(
+                ExtraDetailSaveKey,
+                index
+            );
+
+            PlayerPrefs.Save();
+
+            Debug.Log(
+                "Extra detail selected: " + index,
+                this
+            );
+        });
+
+        extraDetailInput.RefreshShownValue();
+    }
+
+    public void SetDropdown(
+        TMP_Dropdown dropdown,
+        Type enumType,
+        UnityAction<int> onValueChanged)
+    {
+        if (dropdown == null)
+            return;
+
         dropdown.ClearOptions();
-        //Add options (directly ordered by value).
-        var optionData = new List<TMP_Dropdown.OptionData>();
+
+        var optionData =
+            new List<TMP_Dropdown.OptionData>();
+
         foreach (var type in Enum.GetValues(enumType))
-            optionData.Add(new(type.ToString().SpaceUppercases()));
+        {
+            optionData.Add(
+                new TMP_Dropdown.OptionData(
+                    type.ToString().SpaceUppercases()
+                )
+            );
+        }
+
         dropdown.AddOptions(optionData);
 
-        //Register update model func.
         dropdown.onValueChanged.RemoveAllListeners();
-        dropdown.onValueChanged.AddListener(onValueChanged);
-    }
-    void LoadDropdowns(CustomKartData data)
-    {
-        rollCageInput.SetValueWithoutNotify((int)data.RollCage);
-        wheelInput.SetValueWithoutNotify((int)data.Wheel);
-        extraDetailInput.SetValueWithoutNotify((int)data.ExtraDetail);
-        decalInput.SetValueWithoutNotify((int)data.Decal);
+
+        dropdown.onValueChanged.AddListener(
+            onValueChanged
+        );
+
+        dropdown.RefreshShownValue();
     }
 
-    //Color btns
+    private void LoadDropdowns(CustomKartData data)
+    {
+        rollCageInput.SetValueWithoutNotify(
+            Mathf.Clamp(
+                (int)data.RollCage,
+                0,
+                rollCageInput.options.Count - 1
+            )
+        );
+
+        int savedWheel =
+            KartModel.GetSavedWheelIndex(
+                (int)data.Wheel
+            );
+
+        wheelInput.SetValueWithoutNotify(
+            Mathf.Clamp(
+                savedWheel,
+                0,
+                wheelInput.options.Count - 1
+            )
+        );
+
+        int savedExtraDetail = PlayerPrefs.GetInt(
+            ExtraDetailSaveKey,
+            (int)data.ExtraDetail
+        );
+
+        extraDetailInput.SetValueWithoutNotify(
+            Mathf.Clamp(
+                savedExtraDetail,
+                0,
+                extraDetailInput.options.Count - 1
+            )
+        );
+
+        decalInput.SetValueWithoutNotify(
+            Mathf.Clamp(
+                (int)data.Decal,
+                0,
+                decalInput.options.Count - 1
+            )
+        );
+
+        rollCageInput.RefreshShownValue();
+        wheelInput.RefreshShownValue();
+        extraDetailInput.RefreshShownValue();
+        decalInput.RefreshShownValue();
+    }
+
     public void SelectMainColor(string colorStr)
     {
-        var col = ParseInputColor(colorStr);
+        Color col = ParseInputColor(colorStr);
         KartModel.SetMainColor(col);
     }
 
     public void SelectTrimColor(string colorStr)
     {
-        var col = ParseInputColor(colorStr);
+        Color col = ParseInputColor(colorStr);
         KartModel.SetTrimColor(col);
-
-        //if (ColorUtility.TryParseHtmlString("#" + color, out Color newColor))
-        //{
-        //    trimMaterial.material.color = newColor;
-        //    kartData.TrimColor = newColor;
-        //    if (extraDetail != null && extraDetail.GetComponent<MeshRenderer>())
-        //        extraDetail.GetComponent<MeshRenderer>().material.color = kartData.TrimColor;
-        //}
     }
 
     public void SelectDecalColor(string colorStr)
     {
-        var col = ParseInputColor(colorStr);
+        Color col = ParseInputColor(colorStr);
         KartModel.SetDecalColor(col);
-
-        //if (ColorUtility.TryParseHtmlString("#" + color, out Color newColor))
-        //{
-        //    for (int i = 0; i < decal.transform.childCount; i++)
-        //        if (decal.transform.GetChild(i).GetComponent<MeshRenderer>())
-        //        {
-        //            decal.transform.GetChild(i).GetComponent<MeshRenderer>().material.color = newColor;
-        //        }
-        //    kartData.DecalColor = newColor;
-        //}
     }
-
 
     public void LoadData()
     {
-        var loadedData = KartSaveManager.LoadKartData();
-        //Apply saved data.
+        if (!CheckReferences())
+            return;
+
+        RepairSceneReferences();
+
+        CustomKartData loadedData =
+            KartSaveManager.LoadKartData();
+
+        if (loadedData == null)
+        {
+            Debug.LogWarning(
+                "No saved kart data found. Using defaults."
+            );
+
+            loadedData = new CustomKartData();
+        }
+
         KartModel.ApplyKartData(loadedData);
-        //Set initial dropdowns.
+
+        if (KartModel.ExtraDetailObjs != null &&
+            KartModel.ExtraDetailObjs.Count > 0)
+        {
+            int savedExtraDetail = PlayerPrefs.GetInt(
+                ExtraDetailSaveKey,
+                (int)loadedData.ExtraDetail
+            );
+
+            savedExtraDetail = Mathf.Clamp(
+                savedExtraDetail,
+                0,
+                KartModel.ExtraDetailObjs.Count - 1
+            );
+
+            KartModel.SetExtraDetail(savedExtraDetail);
+
+            Debug.Log(
+                "Restored extra detail: " +
+                savedExtraDetail,
+                this
+            );
+        }
+
         LoadDropdowns(loadedData);
+
+        DebugCustomizationReferences();
+
+        Debug.Log(
+            "Kart customization loaded!",
+            this
+        );
     }
+
     public void SaveData()
     {
-        KartSaveManager.SaveKartData(KartModel.KartData);
-        Debug.Log("Kart data saved!");
+        if (KartModel == null ||
+            KartModel.KartData == null)
+            return;
+
+        int selectedExtraDetail =
+            (int)KartModel.KartData.ExtraDetail;
+
+        PlayerPrefs.SetInt(
+            ExtraDetailSaveKey,
+            selectedExtraDetail
+        );
+
+        KartModel.PrepareKartDataForSave();
+
+        try
+        {
+            if (!Enum.IsDefined(
+                typeof(ExtraDetailType),
+                KartModel.KartData.ExtraDetail))
+            {
+                KartModel.KartData.ExtraDetail =
+                    (ExtraDetailType)0;
+            }
+
+            KartSaveManager.SaveKartData(
+                KartModel.KartData
+            );
+        }
+        finally
+        {
+            KartModel.KartData.ExtraDetail =
+                (ExtraDetailType)selectedExtraDetail;
+
+            PlayerPrefs.Save();
+        }
+
+        Debug.Log(
+            "Kart customization saved!",
+            this
+        );
+    }
+
+    public void DebugCustomizationReferences()
+    {
+        if (KartModel == null)
+        {
+            Debug.LogError(
+                "KartModel is missing!",
+                this
+            );
+
+            return;
+        }
+
+        Debug.Log(
+            "Controlling KartModel: " +
+            KartModel.name +
+            " | Scene: " +
+            KartModel.gameObject.scene.name,
+            this
+        );
+
+        DebugObjectList(
+            "Roll Cage",
+            KartModel.RollCageObjs
+        );
+
+        DebugObjectList(
+            "Extra Detail",
+            KartModel.ExtraDetailObjs
+        );
+    }
+
+    private void DebugObjectList(
+        string category,
+        List<GameObject> objects)
+    {
+        if (objects == null)
+        {
+            Debug.LogWarning(
+                category + " list is missing.",
+                this
+            );
+
+            return;
+        }
+
+        for (int i = 0; i < objects.Count; i++)
+        {
+            GameObject obj = objects[i];
+
+            if (obj == null)
+            {
+                Debug.LogError(
+                    category + " " + i +
+                    " is missing!",
+                    this
+                );
+
+                continue;
+            }
+
+            Renderer[] renderers =
+                obj.GetComponentsInChildren<Renderer>(true);
+
+            Debug.Log(
+                category + " " + i +
+                " | " + obj.name +
+                " | Scene Object: " +
+                obj.scene.IsValid() +
+                " | Active Self: " +
+                obj.activeSelf +
+                " | Active In Hierarchy: " +
+                obj.activeInHierarchy +
+                " | Renderers: " +
+                renderers.Length,
+                this
+            );
+        }
     }
 
     public static Color ParseInputColor(string colorStr)
     {
-        ColorUtility.TryParseHtmlString("#" + colorStr, out Color newColor);
+        ColorUtility.TryParseHtmlString(
+            "#" + colorStr,
+            out Color newColor
+        );
+
         return newColor;
     }
-
-    //// Methods for setting parts
-    //public void SetWheels()
-    //{
-    //    if (wheels != null) Destroy(wheels.gameObject);
-    //    int wheelType = wheelInput.value;
-    //    wheels = Instantiate(wheelOptions[wheelType], kart.transform);
-    //    kartData.Wheel = (WheelType)wheelType;
-    //}
-
-    //public void SetRollCage()
-    //{
-    //    if (rollCage != null) Destroy(rollCage.gameObject);
-    //    int rollCageType = rollCageInput.value;
-    //    rollCage = Instantiate(rollCageOptions[rollCageType], kart.transform);
-    //    kartData.RollCage = (RollCageType)rollCageType;
-    //}
-
-    //public void SetExtraDetail()
-    //{
-    //    if (extraDetail != null) Destroy(extraDetail.gameObject);
-    //    int extraDetailType = extraDetailInput.value;
-    //    extraDetail = Instantiate(extraDetailOptions[extraDetailType], kart.transform);
-    //    if (extraDetail.GetComponent<MeshRenderer>())
-    //        extraDetail.GetComponent<MeshRenderer>().material.color = kartData.TrimColor;
-    //    kartData.ExtraDetail = (ExtraDetailType)extraDetailType;
-    //}
-
-    //public void SetDecal()
-    //{
-    //    int decalType = decalInput.value;
-    //    for(int i = 0; i < decal.transform.childCount; i++)
-    //        if (decal.transform.GetChild(i).GetComponent<MeshRenderer>())
-    //        {
-    //            decal.transform.GetChild(i).GetComponent<MeshRenderer>().material = decalMaterials[decalType];
-    //            decal.transform.GetChild(i).GetComponent<MeshRenderer>().material.color = kartData.DecalColor;
-    //        }
-    //    kartData.Decal = (DecalType)decalType;
-    //}
-
-    //// Methods for setting colors
-    //public void SelectMainColor(string color)
-    //{
-    //    if (ColorUtility.TryParseHtmlString("#" + color, out Color newColor))
-    //    {
-    //        bodyMaterial.material.color = newColor;
-    //        kartData.MainColor = newColor;
-    //    }
-    //}
-
-    //public void SelectTrimColor(string color)
-    //{
-    //    if (ColorUtility.TryParseHtmlString("#" + color, out Color newColor))
-    //    {
-    //        trimMaterial.material.color = newColor;
-    //        kartData.TrimColor = newColor;
-    //        if (extraDetail != null && extraDetail.GetComponent<MeshRenderer>()) 
-    //            extraDetail.GetComponent<MeshRenderer>().material.color = kartData.TrimColor;
-    //    }
-    //}
-
-    //public void SelectDecalColor(string color)
-    //{
-    //    if (ColorUtility.TryParseHtmlString("#" + color, out Color newColor))
-    //    {
-    //        for(int i = 0; i < decal.transform.childCount; i++)
-    //            if (decal.transform.GetChild(i).GetComponent<MeshRenderer>())
-    //            {
-    //                decal.transform.GetChild(i).GetComponent<MeshRenderer>().material.color = newColor;
-    //            }
-    //        kartData.DecalColor = newColor;
-    //    }
-    //}
-
-    // Methods for names
-    //public void SetKartName() => kartData.KartName = kartNameInput.text;
-    //public void SetDriverName() => kartData.DriverName = driverNameInput.text;
-
-    /*
-    public void LoadSelectedKart()
-    {
-        if (PlayerPrefs.HasKey(SelectedKartNameKey))
-        {
-            var selectedName = PlayerPrefs.GetString(SelectedKartNameKey);
-            var karts = KartSaveManager.LoadKartData().ToList();
-            var selected = karts.Find(x => x.KartName == selectedName);
-
-            if (selected != null)
-                kartData = selected;
-        }
-
-        LoadKart(kartData);
-    }
-    public void LoadKart(CustomKartData kartData)
-    {
-        if (wheels != null) Destroy(wheels.gameObject);
-        if (rollCage != null) Destroy(rollCage.gameObject);
-        if (extraDetail != null) Destroy(extraDetail.gameObject);
-        if (decal != null) Destroy(decal.gameObject);
-
-        // Instantiate prefabs
-        wheels = Instantiate(wheelOptions[(int)kartData.Wheel], kart.transform);
-        rollCage = Instantiate(rollCageOptions[(int)kartData.RollCage], kart.transform);
-        extraDetail = Instantiate(extraDetailOptions[(int)kartData.ExtraDetail], kart.transform);
-        decal = Instantiate(decalOptions[(int)kartData.Decal], kart.transform);
-
-        // Colors
-        bodyMaterial.material.color = kartData.MainColor;
-        trimMaterial.material.color = kartData.TrimColor;
-        if(extraDetail.GetComponent<MeshRenderer>())
-            extraDetail.GetComponent<MeshRenderer>().material.color = kartData.TrimColor;
-        for(int i = 0; i < decal.transform.childCount; i++)
-            if (decal.transform.GetChild(i).GetComponent<MeshRenderer>())
-            {
-                //decal.transform.GetChild(i).GetComponent<MeshRenderer>().material = decalMaterials[kartData.Decal];
-                decal.transform.GetChild(i).GetComponent<MeshRenderer>().material.color = this.kartData.DecalColor;
-            }
-
-        // Update dropdowns and input fields
-        wheelInput.value = (int)kartData.Wheel;
-        rollCageInput.value = (int)kartData.RollCage;
-        extraDetailInput.value = (int)kartData.ExtraDetail;
-        decalInput.value = (int)kartData.Decal;
-        kartNameInput.text = kartData.KartName;
-        driverNameInput.text = kartData.DriverName;
-
-        this.kartData = kartData;
-    }
-
-    // Initial defaults
-    void UpdateLapDisplayDefaults()
-    {
-        SetWheels();
-        SetRollCage();
-        SetExtraDetail();
-        SetDecal();
-        SelectMainColor("FFFFFF");
-        SelectTrimColor("000000");
-        SelectDecalColor("FFFFFF");
-    }
-    */
 }

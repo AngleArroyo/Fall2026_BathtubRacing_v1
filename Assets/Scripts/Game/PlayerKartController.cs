@@ -1,6 +1,7 @@
 ﻿using GONet;
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -28,20 +29,25 @@ public class PlayerKartController : MonoBehaviour
     public float boostDuration = 3f;
 
     [Header("Camera Settings")]
-    private bool firstPerson = false;
     public Transform playerCamera;
-
-    // Third-person camera
-    public float cameraDistance = 6f;
-    public float cameraHeight = 3f;
-    public float cameraLookHeight = 1f;
-    public float cameraFollowSpeed = 8f;
-    public float cameraRotationSpeed = 8f;
-
     public float tiltAmount = 5f;
     public float tiltSpeed = 5f;
     public float bobAmount = 0.05f;
     public float bobSpeed = 4f;
+    private bool firstPerson = false;
+
+    [Header("Camera View Switching (Left/Right Alt)")]
+    //[Tooltip("Use the camera's original prefab position as first person when enabled.")]
+    //public bool startInFirstPerson = true;
+
+    [Tooltip("Position relative to the camera's parent. Adjust to frame the whole kart.")]
+    public Vector3 thirdPersonLocalPosition =
+        new Vector3(0f, 2.4f, -5.5f);
+
+    [Tooltip("How far the third-person camera looks downward, in degrees.")]
+    public float thirdPersonPitch = 10f;
+
+    public float cameraPositionSpeed = 10f;
 
     [Header("Camera Shake")]
     public float collisionShakeIntensity = 0.05f;
@@ -65,20 +71,20 @@ public class PlayerKartController : MonoBehaviour
     [Header("Stabilization Settings")]
     public float groundForce = 50f;
 
-    [System.NonSerialized]
-    public Rigidbody rb;
+    [System.NonSerialized] public Rigidbody rb;
 
     private GONetParticipant gonetParticipant;
     private Collider col;
 
     private float moveInput;
     private float turnInput;
+
     private Vector3 camDefaultLocalPos;
+    private bool isFirstPerson = false;
+    private Vector3 cameraShakeOffset;
 
     private bool isBoosting = false;
     private bool isShaking = false;
-
-    private Vector3 cameraShakeOffset = Vector3.zero;
 
     private float retainedSpeed = 0f;
     private float retainedSpeedDirection = 1f;
@@ -87,6 +93,9 @@ public class PlayerKartController : MonoBehaviour
 
     private RawImage HelmetOverlay;
 
+    // ==================================
+    // INITIALIZATION
+    // ==================================
 
     void Awake()
     {
@@ -129,38 +138,69 @@ public class PlayerKartController : MonoBehaviour
                 break;
         }
 
+        // Set the starting camera perspective.
+        
+
         if (playerCamera != null)
+        {
+            // Save original first-person position.
             camDefaultLocalPos = playerCamera.localPosition;
+
+            playerCamera.localRotation = Quaternion.identity;
+
+            // Start in third person if selected.
+            if (!isFirstPerson)
+            {
+                playerCamera.localPosition =
+                    thirdPersonLocalPosition;
+
+                playerCamera.localRotation =
+                    Quaternion.Euler(thirdPersonPitch, 0f, 0f);
+            }
+        }
     }
 
-
-    // Offline/solo or locally owned kart.
+    // Only the locally controlled kart
+    // should receive player input.
     private bool IsLocallyControlled =>
         gonetParticipant == null ||
         gonetParticipant.IsLocallyControlled;
 
-   
+    // ==================================
+    // UPDATE
+    // ==================================
+
     void Update()
     {
-        if (!IsLocallyControlled)
-            return;
-
-        ApplyInput();
-        UpdateEngineSound();
-
         if (HelmetOverlay == null)
             findHelmet();
 
-        if (InputManager.SwitchCamAction != null && InputManager.SwitchCamAction.WasCompletedThisFrame())
+        if (!IsLocallyControlled)
+            return;
+
+        // ALT KEY CAMERA SWITCHING
+        if (Keyboard.current != null &&
+            (Keyboard.current.leftAltKey.wasPressedThisFrame ||
+             Keyboard.current.rightAltKey.wasPressedThisFrame))
         {
-            firstPerson = !firstPerson;
+            isFirstPerson = !isFirstPerson;
 
-            if (HelmetOverlay != null)
-                HelmetOverlay.enabled = firstPerson;
+              if (HelmetOverlay != null)
+                HelmetOverlay.enabled = isFirstPerson;
+
+            Debug.Log(
+                "Camera switched to: " +
+                (isFirstPerson
+                    ? "First Person"
+                    : "Third Person")
+            );
         }
-        
-    }
 
+        
+
+        ApplyInput();
+        UpdateEngineSound();
+    }
 
     void FixedUpdate()
     {
@@ -171,7 +211,6 @@ public class PlayerKartController : MonoBehaviour
         StabilizeKart();
     }
 
-
     void LateUpdate()
     {
         if (!IsLocallyControlled)
@@ -180,98 +219,90 @@ public class PlayerKartController : MonoBehaviour
         HandleCamera();
     }
 
+    // ==================================
+    // PLAYER INPUT
+    // ==================================
 
     void ApplyInput()
     {
-        //moveInput = Input.GetAxis("Vertical");
-        //turnInput = Input.GetAxis("Horizontal");
-
         moveInput = InputManager.PlayerMoveInput.y;
         turnInput = InputManager.PlayerMoveInput.x;
 
-        //if (Input.GetKey(KeyCode.LeftShift))
-
+        // Drifting
         if (InputManager.DriftAction.IsPressed())
             turnInput *= driftMultiplier;
 
-        //if (Input.GetKeyDown(KeyCode.Space) && !isBoosting)
-
-        if (InputManager.BoostAction.WasPressedThisFrame() &&
-            !isBoosting)
+        // Boosting
+        if (InputManager.BoostAction.WasPressedThisFrame()
+            && !isBoosting)
         {
             StartCoroutine(BoostCoroutine());
         }
     }
 
+    // ==================================
+    // ENGINE AUDIO
+    // ==================================
 
     void UpdateEngineSound()
     {
-        if (engineAudio == null ||
-            idleEngineAudio == null)
-        {
+        if (engineAudio == null || idleEngineAudio == null)
             return;
-        }
 
         float speedVal = rb.velocity.magnitude;
-
-        bool isMoving =
-            speedVal > 0.5f;
+        bool isMoving = speedVal > 0.5f;
 
         float speedPercent =
-            speedVal /
-            (speed * weightFactor);
+            speedVal / (speed * weightFactor);
 
-        engineAudio.pitch =
-            Mathf.Lerp(
-                engineMinPitch,
-                engineMaxPitch,
-                speedPercent
-            );
+        engineAudio.pitch = Mathf.Lerp(
+            engineMinPitch,
+            engineMaxPitch,
+            speedPercent
+        );
 
-        engineAudio.volume =
-            Mathf.Lerp(
-                0.2f,
-                0.5f,
-                speedPercent
-            );
+        engineAudio.volume = Mathf.Lerp(
+            0.2f,
+            0.5f,
+            speedPercent
+        );
 
         if (isBoosting)
             engineAudio.pitch += engineBoostPitch;
 
         if (isMoving)
         {
-            engineAudio.volume =
-                Mathf.MoveTowards(
-                    engineAudio.volume,
-                    1f,
-                    Time.deltaTime * 3f
-                );
+            engineAudio.volume = Mathf.MoveTowards(
+                engineAudio.volume,
+                1f,
+                Time.deltaTime * 3f
+            );
 
-            idleEngineAudio.volume =
-                Mathf.MoveTowards(
-                    idleEngineAudio.volume,
-                    0f,
-                    Time.deltaTime * 3f
-                );
+            idleEngineAudio.volume = Mathf.MoveTowards(
+                idleEngineAudio.volume,
+                0f,
+                Time.deltaTime * 3f
+            );
         }
         else
         {
-            idleEngineAudio.volume =
-                Mathf.MoveTowards(
-                    idleEngineAudio.volume,
-                    0.8f,
-                    Time.deltaTime * 3f
-                );
+            idleEngineAudio.volume = Mathf.MoveTowards(
+                idleEngineAudio.volume,
+                0.8f,
+                Time.deltaTime * 3f
+            );
 
-            engineAudio.volume =
-                Mathf.MoveTowards(
-                    engineAudio.volume,
-                    0f,
-                    Time.deltaTime * 3f
-                );
+            engineAudio.volume = Mathf.MoveTowards(
+                engineAudio.volume,
+                0f,
+                Time.deltaTime * 3f
+            );
         }
     }
 
+    // ==================================
+    // KART MOVEMENT
+    // ==================================
 
     void UpdatePosition()
     {
@@ -282,32 +313,27 @@ public class PlayerKartController : MonoBehaviour
         }
 
         float currentAcceleration =
-            acceleration *
-            (1f / weightFactor);
+            acceleration * (1f / weightFactor);
 
         if (isBoosting)
             currentAcceleration *= boostMultiplier;
 
-        float halfHeight =
-            col != null
+        float halfHeight = col != null
             ? col.bounds.extents.y
             : 1f;
 
-        Vector3 rayStart =
-            col != null
+        Vector3 rayStart = col != null
             ? col.bounds.center + Vector3.up * 0.1f
             : transform.position + Vector3.up * 0.1f;
 
-        float rayLength =
-            halfHeight + 0.5f;
+        float rayLength = halfHeight + 0.5f;
 
-        bool grounded =
-            Physics.Raycast(
-                rayStart,
-                Vector3.down,
-                out RaycastHit hit,
-                rayLength
-            );
+        bool grounded = Physics.Raycast(
+            rayStart,
+            Vector3.down,
+            out RaycastHit hit,
+            rayLength
+        );
 
         if (grounded)
         {
@@ -315,8 +341,7 @@ public class PlayerKartController : MonoBehaviour
                 Quaternion.FromToRotation(
                     transform.up,
                     hit.normal
-                ) *
-                transform.rotation;
+                ) * transform.rotation;
 
             rb.MoveRotation(
                 Quaternion.Slerp(
@@ -332,11 +357,7 @@ public class PlayerKartController : MonoBehaviour
                     hit.normal
                 ).normalized;
 
-
-            // --------------------------
-            //     FORWARD MOVEMENT
-            // --------------------------
-
+            // FORWARD MOVEMENT
             if (moveInput > 0.1f)
             {
                 rb.AddForce(
@@ -346,38 +367,31 @@ public class PlayerKartController : MonoBehaviour
                     ForceMode.Acceleration
                 );
 
-                retainedSpeed =
-                    rb.velocity.magnitude;
-
+                retainedSpeed = rb.velocity.magnitude;
                 retainedSpeedDirection = 1f;
             }
 
-
-            // --------------------------
-            //     BRAKING / REVERSE
-            // --------------------------
-
+            // BRAKING AND REVERSE
             else if (moveInput < -0.1f)
             {
+                // Brake before reversing.
                 if (Vector3.Dot(
                     rb.velocity,
                     transform.forward
                 ) > reverseEngageSpeed)
                 {
-                    rb.velocity =
-                        Vector3.MoveTowards(
-                            rb.velocity,
-                            Vector3.zero,
-                            currentAcceleration *
-                            Time.fixedDeltaTime
-                        );
+                    rb.velocity = Vector3.MoveTowards(
+                        rb.velocity,
+                        Vector3.zero,
+                        currentAcceleration *
+                        Time.fixedDeltaTime
+                    );
 
-                    retainedSpeed =
-                        rb.velocity.magnitude;
-
+                    retainedSpeed = rb.velocity.magnitude;
                     return;
                 }
 
+                // Reverse once slowed.
                 rb.AddForce(
                     slopeForward *
                     moveInput *
@@ -386,36 +400,26 @@ public class PlayerKartController : MonoBehaviour
                     ForceMode.Acceleration
                 );
 
-                retainedSpeed =
-                    rb.velocity.magnitude;
-
+                retainedSpeed = rb.velocity.magnitude;
                 retainedSpeedDirection = -1f;
             }
-
             else
             {
                 // COASTING
-
-                if (rb.velocity.magnitude <
-                    retainedSpeed)
+                if (rb.velocity.magnitude < retainedSpeed)
                 {
                     Vector3 dir =
                         retainedSpeedDirection < 0
-                        ? -transform.forward
-                        : transform.forward;
+                            ? -transform.forward
+                            : transform.forward;
 
-                    rb.velocity =
-                        dir * retainedSpeed;
+                    rb.velocity = dir * retainedSpeed;
                 }
             }
         }
-
         else
         {
-            // ------------------
-            // MID-AIR FORWARD
-            // ------------------
-
+            // MID-AIR FORWARD MOVEMENT
             if (moveInput > 0.1f)
             {
                 rb.AddForce(
@@ -424,17 +428,11 @@ public class PlayerKartController : MonoBehaviour
                     ForceMode.Acceleration
                 );
 
-                retainedSpeed =
-                    rb.velocity.magnitude;
-
+                retainedSpeed = rb.velocity.magnitude;
                 retainedSpeedDirection = 1f;
             }
 
-
-            // ------------------
-            // MID-AIR REVERSE
-            // ------------------
-
+            // MID-AIR BRAKING AND REVERSE
             else if (moveInput < -0.1f)
             {
                 if (Vector3.Dot(
@@ -442,17 +440,14 @@ public class PlayerKartController : MonoBehaviour
                     transform.forward
                 ) > reverseEngageSpeed)
                 {
-                    rb.velocity =
-                        Vector3.MoveTowards(
-                            rb.velocity,
-                            Vector3.zero,
-                            currentAcceleration *
-                            Time.fixedDeltaTime
-                        );
+                    rb.velocity = Vector3.MoveTowards(
+                        rb.velocity,
+                        Vector3.zero,
+                        currentAcceleration *
+                        Time.fixedDeltaTime
+                    );
 
-                    retainedSpeed =
-                        rb.velocity.magnitude;
-
+                    retainedSpeed = rb.velocity.magnitude;
                     return;
                 }
 
@@ -463,50 +458,37 @@ public class PlayerKartController : MonoBehaviour
                     ForceMode.Acceleration
                 );
 
-                retainedSpeed =
-                    rb.velocity.magnitude;
-
+                retainedSpeed = rb.velocity.magnitude;
                 retainedSpeedDirection = -1f;
             }
-
             else
             {
-                if (rb.velocity.magnitude <
-                    retainedSpeed)
+                if (rb.velocity.magnitude < retainedSpeed)
                 {
                     Vector3 dir =
                         retainedSpeedDirection < 0
-                        ? -transform.forward
-                        : transform.forward;
+                            ? -transform.forward
+                            : transform.forward;
 
-                    rb.velocity =
-                        dir * retainedSpeed;
+                    rb.velocity = dir * retainedSpeed;
                 }
             }
         }
 
-
-        // Clamp max speed
-
+        // MAXIMUM SPEED
         float currentMaxSpeed =
-            speed *
-            weightFactor *
+            speed * weightFactor *
             (isBoosting ? boostMultiplier : 1f);
 
-        if (rb.velocity.magnitude >
-            currentMaxSpeed)
+        if (rb.velocity.magnitude > currentMaxSpeed)
         {
             rb.velocity =
-                rb.velocity.normalized *
-                currentMaxSpeed;
+                rb.velocity.normalized * currentMaxSpeed;
         }
 
-
-        // Turning
-
+        // TURNING
         float adjustedHandling =
-            handling *
-            handlingFactor;
+            handling * handlingFactor;
 
         float turnAngle =
             turnInput *
@@ -515,145 +497,108 @@ public class PlayerKartController : MonoBehaviour
 
         rb.MoveRotation(
             rb.rotation *
-            Quaternion.Euler(
-                0,
-                turnAngle,
-                0
-            )
+            Quaternion.Euler(0, turnAngle, 0)
         );
 
-
-        // Keep velocity aligned with direction
-
+        // ALIGN VELOCITY WITH KART DIRECTION
         if (rb.velocity.magnitude > 0.1f)
         {
             Vector3 dir =
                 retainedSpeedDirection < 0
-                ? -transform.forward
-                : transform.forward;
+                    ? -transform.forward
+                    : transform.forward;
 
-            rb.velocity =
-                dir *
-                rb.velocity.magnitude;
+            rb.velocity = dir * rb.velocity.magnitude;
         }
     }
 
+    // ==================================
+    // FIRST / THIRD PERSON CAMERA
+    // ==================================
 
     void HandleCamera()
     {
         if (playerCamera == null)
             return;
 
-        // Camera bob.
-        float speedVal =
-            rb.velocity.magnitude;
-
-        float bobOffset =
-            Mathf.Sin(
-                Time.time * bobSpeed
-            ) *
-            bobAmount *
-            Mathf.Clamp01(
-                speedVal / speed
-            );
-
-        if (firstPerson)
-        {
-            float driftTilt = InputManager.DriftAction.IsPressed() ? 1.5f : 1f;
-            float sideTilt = -turnInput * tiltAmount * driftTilt;
-            //float speedValTemp = rb.velocity.magnitude;
-            //float bobOffsetTemp = Mathf.Sin(Time.time * bobSpeed) * bobAmount * Mathf.Clamp01(speedValTemp / speed);
-
-            playerCamera.localPosition = camDefaultLocalPos + new Vector3(0f, bobOffset, 0f);
-            playerCamera.localRotation = Quaternion.Slerp(playerCamera.localRotation, Quaternion.Euler(0f, 0f, sideTilt), Time.deltaTime * tiltSpeed);
-
-            return;
-        }
-
-        // Position behind and above kart.
-        Vector3 targetPosition =
-            transform.position
-            - transform.forward * cameraDistance
-            + Vector3.up * cameraHeight;
-
-        targetPosition +=
-            Vector3.up * bobOffset;
-
-        // Collision shake.
-        targetPosition +=
-            cameraShakeOffset;
-
-        playerCamera.position =
-            Vector3.Lerp(
-                playerCamera.position,
-                targetPosition,
-                Time.deltaTime *
-                cameraFollowSpeed
-            );
-
-
-        // Look slightly above the kart.
-        Vector3 lookTarget =
-            transform.position +
-            Vector3.up *
-            cameraLookHeight;
-
-        Vector3 lookDirection =
-            lookTarget -
-            playerCamera.position;
-
-        if (lookDirection.sqrMagnitude >
-            0.01f)
-        {
-            Quaternion targetRotation =
-                Quaternion.LookRotation(
-                    lookDirection,
-                    Vector3.up
-                );
-
-            // Keep your original turning tilt.
-            float driftTilt =
-                InputManager.DriftAction.IsPressed()
+        // Apply steering and drift tilt.
+        float driftTilt =
+            InputManager.DriftAction.IsPressed()
                 ? 1.5f
                 : 1f;
 
-            float sideTilt =
-                -turnInput *
-                tiltAmount *
-                driftTilt;
+        float sideTilt =
+            -turnInput * tiltAmount * driftTilt;
 
-            targetRotation *=
-                Quaternion.Euler(
-                    0,
-                    0,
-                    sideTilt
-                );
+        // First person looks straight ahead.
+        // Third person looks slightly downward.
+        float pitch = isFirstPerson
+            ? 0f
+            : thirdPersonPitch;
 
-            playerCamera.rotation =
-                Quaternion.Slerp(
-                    playerCamera.rotation,
-                    targetRotation,
-                    Time.deltaTime *
-                    cameraRotationSpeed
-                );
-        }
+        Quaternion targetRotation =
+            Quaternion.Euler(
+                pitch,
+                0f,
+                sideTilt
+            );
+
+        // Smooth camera rotation.
+        playerCamera.localRotation =
+            Quaternion.Slerp(
+                playerCamera.localRotation,
+                targetRotation,
+                Mathf.Clamp01(
+                    Time.deltaTime * tiltSpeed
+                )
+            );
+
+        // Camera bobbing.
+        float speedVal = rb.velocity.magnitude;
+
+        float bobOffset =
+            Mathf.Sin(Time.time * bobSpeed) *
+            bobAmount *
+            Mathf.Clamp01(
+                speedVal / Mathf.Max(speed, 0.01f)
+            );
+
+        // Select camera position.
+        Vector3 viewPosition = isFirstPerson
+            ? camDefaultLocalPos
+            : thirdPersonLocalPosition;
+
+        Vector3 targetPosition =
+            viewPosition +
+            new Vector3(0f, bobOffset, 0f) +
+            cameraShakeOffset;
+
+        // Smooth transition between camera views.
+        playerCamera.localPosition =
+            Vector3.Lerp(
+                playerCamera.localPosition,
+                targetPosition,
+                Mathf.Clamp01(
+                    Time.deltaTime * cameraPositionSpeed
+                )
+            );
     }
 
+    // ==================================
+    // KART STABILIZATION
+    // ==================================
 
     void StabilizeKart()
     {
-        float halfHeight =
-            col != null
+        float halfHeight = col != null
             ? col.bounds.extents.y
             : 1f;
 
-        Vector3 rayStart =
-            col != null
+        Vector3 rayStart = col != null
             ? col.bounds.center
             : transform.position;
 
-        float rayLength =
-            halfHeight + 0.2f;
+        float rayLength = halfHeight + 0.2f;
 
         if (!Physics.Raycast(
             rayStart,
@@ -661,13 +606,15 @@ public class PlayerKartController : MonoBehaviour
             rayLength))
         {
             rb.AddForce(
-                Vector3.down *
-                groundForce,
+                Vector3.down * groundForce,
                 ForceMode.Acceleration
             );
         }
     }
 
+    // ==================================
+    // BOOST SYSTEM
+    // ==================================
 
     IEnumerator BoostCoroutine()
     {
@@ -676,9 +623,7 @@ public class PlayerKartController : MonoBehaviour
         if (boostParticles != null)
             boostParticles.Play();
 
-        yield return new WaitForSeconds(
-            boostDuration
-        );
+        yield return new WaitForSeconds(boostDuration);
 
         isBoosting = false;
 
@@ -686,10 +631,11 @@ public class PlayerKartController : MonoBehaviour
             boostParticles.Stop();
     }
 
+    // ==================================
+    // COLLISION HANDLING
+    // ==================================
 
-    void OnCollisionEnter(
-        Collision collision
-    )
+    void OnCollisionEnter(Collision collision)
     {
         if (!IsLocallyControlled)
             return;
@@ -711,19 +657,18 @@ public class PlayerKartController : MonoBehaviour
             if (collisionParticles != null)
                 collisionParticles.Play();
 
-            rb.velocity *=
-                collisionSlowdownFactor;
+            rb.velocity *= collisionSlowdownFactor;
 
-            if (!isShaking &&
-                playerCamera != null)
+            if (!isShaking && playerCamera != null)
             {
-                StartCoroutine(
-                    CameraShake()
-                );
+                StartCoroutine(CameraShake());
             }
         }
     }
 
+    // ==================================
+    // CAMERA SHAKE
+    // ==================================
 
     IEnumerator CameraShake()
     {
@@ -731,36 +676,25 @@ public class PlayerKartController : MonoBehaviour
 
         float time = 0f;
 
-        while (time <
-               collisionShakeDuration)
+        while (time < collisionShakeDuration)
         {
-            float x =
+            cameraShakeOffset = new Vector3(
                 Random.Range(
                     -collisionShakeIntensity,
                     collisionShakeIntensity
-                );
-
-            float y =
+                ),
                 Random.Range(
                     -collisionShakeIntensity,
                     collisionShakeIntensity
-                );
-
-            cameraShakeOffset =
-                new Vector3(
-                    x,
-                    y,
-                    0f
-                );
+                ),
+                0f
+            );
 
             time += Time.deltaTime;
-
             yield return null;
         }
 
-        cameraShakeOffset =
-            Vector3.zero;
-
+        cameraShakeOffset = Vector3.zero;
         isShaking = false;
     }
 
@@ -772,7 +706,5 @@ public class PlayerKartController : MonoBehaviour
         GameObject helmet = GameObject.FindGameObjectWithTag("HelmetOverlay");
 
         HelmetOverlay = helmet.GetComponent<RawImage>();
-
-        HelmetOverlay.enabled = firstPerson;
     }
-}
+} 

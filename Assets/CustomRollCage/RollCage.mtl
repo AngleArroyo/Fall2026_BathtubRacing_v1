@@ -1,0 +1,5 @@
+newmtl RawSteel
+Ka 0.2 0.2 0.2
+Kd 0.55 0.56 0.58
+Ks 0.6 0.6 0.6
+Ns 60

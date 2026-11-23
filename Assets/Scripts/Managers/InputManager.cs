@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -39,7 +40,6 @@ public class InputManager : MonoBehaviour, IOrderedScript
         InputActions.Enable();
         BoostAction = InputActions.Player.Boost;
         DriftAction = InputActions.Player.Drift;
-        SwitchCamAction = InputActions.Player.SwitchCam;
 
         //Set using controller on awake to allow the first selected object to be selected.
         IsUsingController = Gamepad.current != null;

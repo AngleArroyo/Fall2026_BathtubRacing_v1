@@ -1,0 +1,24 @@
+newmtl Tire
+Kd 0.04 0.04 0.04
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl Rim
+Kd 0.33 0.33 0.35
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl Spokes
+Kd 0.42 0.42 0.45
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+Ns 10
+
+newmtl Hub
+Kd 0.28 0.28 0.3
+Ka 0 0 0
+Ks 0.05 0.05 0.05
+Ns 10
+
